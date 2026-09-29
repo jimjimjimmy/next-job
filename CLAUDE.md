@@ -11,12 +11,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 1. Job Research & Lead Tracking
 **Goal**: Research companies, roles, and collect leads in an organized way.
 
+**Use the company research template** (`docs/interview/company-research-template.md`) for all company research. It captures:
+- Executive thesis + strategic insights
+- Deep product analysis
+- How to position yourself
+- Pre-written interview answers
+- Strategic questions to ask
+- Three interview stories to prepare
+
 ```bash
 # Research a company/job
-# - Gather info: company mission, tech stack, team, culture
+# - Use docs/interview/company-research-template.md as your structure
+# - Gather info: company mission, product, strategy, differentiation
 # - Find contacts (recruiters, hiring managers)
 # - Note role requirements and compensation range
-# - Save to: docs/leads/ or research/ folder
+# - Save completed research to: docs/leads/[company]-research.md
 
 # Track applications
 # - Company name, role, date applied, contact person, status

@@ -67,9 +67,18 @@ export class GoogleDocsClient implements DocClient {
   private readonly docs: docs_v1.Docs;
   private readonly docId: string;
 
-  constructor(docId: string, credentialsPath: string) {
+  /**
+   * `credentials` is either a path to a service-account JSON key file, or
+   * the raw JSON key content itself (useful when the key is injected via an
+   * environment variable rather than a file on disk).
+   */
+  constructor(docId: string, credentials: string) {
+    const trimmed = credentials.trim();
+    const authOptions = trimmed.startsWith("{")
+      ? { credentials: JSON.parse(trimmed) }
+      : { keyFile: trimmed };
     const auth = new GoogleAuth({
-      keyFile: credentialsPath,
+      ...authOptions,
       scopes: ["https://www.googleapis.com/auth/documents"],
     });
     this.docs = google.docs({ version: "v1", auth });

@@ -43,9 +43,10 @@ before and after to see the before/after state.
 2. Enable the Google Docs API for that project.
 3. Share your Google Doc with the service account's `client_email` (Editor
    access).
-4. In `.env`, set:
+4. In `.env` (or as environment variables, e.g. in a cloud sandbox), set:
    - `GOOGLE_DOC_ID` — the ID from the doc's URL
-   - `GOOGLE_APPLICATION_CREDENTIALS` — path to the service account JSON key
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — the service account key JSON content (one
+     line), **or** `GOOGLE_APPLICATION_CREDENTIALS` — a path to the key file
    - `GEMINI_API_KEY` — from https://aistudio.google.com/apikey
 5. Start monitoring:
 

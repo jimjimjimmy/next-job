@@ -98,7 +98,7 @@ async function buildDocClient(forceMock: boolean): Promise<DocClient> {
     return new MockDocClient(MOCK_DOC_PATH);
   }
   console.log(`[agent-collab] using live Google Doc ${config.googleDocId}`);
-  return new GoogleDocsClient(config.googleDocId as string, config.googleCredentialsPath as string);
+  return new GoogleDocsClient(config.googleDocId as string, config.googleCredentials as string);
 }
 
 async function startMonitoring(cli: Cli): Promise<void> {

@@ -149,6 +149,9 @@ export class GoogleDocsClient implements DocClient {
   }
 
   async insertText(insertAt: number, text: string): Promise<void> {
+    // The Docs API's body indices are 1 higher than extractPlainText's offsets:
+    // the body's leading sectionBreak occupies index 0 but contributes no
+    // paragraph text, so plain-text offset 0 is docs index 1.
     await this.docs.documents.batchUpdate({
       documentId: this.docId,
       requestBody: {
@@ -156,7 +159,7 @@ export class GoogleDocsClient implements DocClient {
           {
             insertText: {
               text,
-              location: { index: insertAt },
+              location: { index: insertAt + 1 },
             },
           },
         ],
@@ -165,17 +168,20 @@ export class GoogleDocsClient implements DocClient {
   }
 
   async insertStyledBlock(insertAt: number, segments: TextSegment[]): Promise<void> {
+    // Same +1 offset as insertText (see comment there): plain-text offset 0
+    // is docs index 1.
+    const docsInsertAt = insertAt + 1;
     const fullText = segments.map((s) => s.text).join("");
     const requests: docs_v1.Schema$Request[] = [
       {
         insertText: {
           text: fullText,
-          location: { index: insertAt },
+          location: { index: docsInsertAt },
         },
       },
     ];
 
-    let cursor = insertAt;
+    let cursor = docsInsertAt;
     for (const segment of segments) {
       requests.push({
         updateTextStyle: {

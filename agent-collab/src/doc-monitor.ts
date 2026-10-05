@@ -13,6 +13,14 @@ export interface GeminiTag {
 }
 
 export const ANSWERED_MARKER = "[agent-collab:answered]";
+export const CLAUDE_REVIEWED_MARKER = "[agent-collab:claude-reviewed]";
+
+/** A run of text with optional rich-text styling. */
+export interface TextSegment {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+}
 
 /**
  * Backend-agnostic view of a document: plain text in, plain text out. Both the
@@ -25,11 +33,10 @@ export interface DocClient {
   /** Inserts `text` at character offset `insertAt` in the plain text. */
   insertText(insertAt: number, text: string): Promise<void>;
   /**
-   * Inserts a response block at `insertAt`: a header line followed by the
-   * body text, with the header bolded where the backend supports rich
-   * formatting.
+   * Inserts consecutive text segments at `insertAt`, applying each
+   * segment's styling where the backend supports rich formatting.
    */
-  insertAnsweredBlock(insertAt: number, header: string, body: string): Promise<void>;
+  insertStyledBlock(insertAt: number, segments: TextSegment[]): Promise<void>;
 }
 
 const TAG_PATTERN = /@Gemini\s+([^\n]+)/g;
@@ -61,6 +68,10 @@ export interface AnsweredResponse {
   prompt: string;
   timestamp: string;
   response: string;
+  /** Whether a Claude review has already been written under this response. */
+  reviewed: boolean;
+  /** Character offset right after this response (and any existing review), where a new Claude review should be inserted. */
+  insertReviewAt: number;
 }
 
 const HEADER_PATTERN = /Gemini response \(([^)]+)\) \[agent-collab:answered\]\n/;
@@ -81,11 +92,14 @@ export function findAnsweredResponses(text: string): AnsweredResponse[] {
     const rest = text.slice(bodyStart);
     const nextTag = rest.match(/\n@Gemini\s/);
     const bodyEnd = nextTag && nextTag.index !== undefined ? bodyStart + nextTag.index : text.length;
+    const block = text.slice(bodyStart, bodyEnd);
 
     results.push({
       prompt,
       timestamp: headerMatch[1],
-      response: text.slice(bodyStart, bodyEnd).trim(),
+      response: block.trim(),
+      reviewed: block.includes(CLAUDE_REVIEWED_MARKER),
+      insertReviewAt: bodyEnd,
     });
   }
   return results;
@@ -99,6 +113,11 @@ export function formatResponseHeader(timestamp: string): string {
 /** The bolded response body, placed under the header with a blank line in between. */
 export function formatResponseBody(response: string): string {
   return `\n${response}\n`;
+}
+
+/** The plain (non-bold) header line placed above a Claude review. */
+export function formatClaudeReviewHeader(timestamp: string): string {
+  return `\nClaude review (${timestamp}) ${CLAUDE_REVIEWED_MARKER}\n`;
 }
 
 /** Real backend: reads/writes a live Google Doc via the Docs API. */
@@ -145,39 +164,32 @@ export class GoogleDocsClient implements DocClient {
     });
   }
 
-  async insertAnsweredBlock(insertAt: number, header: string, body: string): Promise<void> {
+  async insertStyledBlock(insertAt: number, segments: TextSegment[]): Promise<void> {
+    const fullText = segments.map((s) => s.text).join("");
+    const requests: docs_v1.Schema$Request[] = [
+      {
+        insertText: {
+          text: fullText,
+          location: { index: insertAt },
+        },
+      },
+    ];
+
+    let cursor = insertAt;
+    for (const segment of segments) {
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: cursor, endIndex: cursor + segment.text.length },
+          textStyle: { bold: !!segment.bold, italic: !!segment.italic },
+          fields: "bold,italic",
+        },
+      });
+      cursor += segment.text.length;
+    }
+
     await this.docs.documents.batchUpdate({
       documentId: this.docId,
-      requestBody: {
-        requests: [
-          {
-            insertText: {
-              text: header + body,
-              location: { index: insertAt },
-            },
-          },
-          {
-            updateTextStyle: {
-              range: {
-                startIndex: insertAt,
-                endIndex: insertAt + header.length,
-              },
-              textStyle: { bold: false },
-              fields: "bold",
-            },
-          },
-          {
-            updateTextStyle: {
-              range: {
-                startIndex: insertAt + header.length,
-                endIndex: insertAt + header.length + body.length,
-              },
-              textStyle: { bold: true },
-              fields: "bold",
-            },
-          },
-        ],
-      },
+      requestBody: { requests },
     });
   }
 }
@@ -212,9 +224,9 @@ export class MockDocClient implements DocClient {
     await writeFile(this.filePath, JSON.stringify(doc, null, 2), "utf-8");
   }
 
-  // The mock backend has no rich-text model, so the header is written as
-  // plain text like the body; there's nothing to bold.
-  async insertAnsweredBlock(insertAt: number, header: string, body: string): Promise<void> {
-    await this.insertText(insertAt, header + body);
+  // The mock backend has no rich-text model, so styled segments are written
+  // as plain concatenated text; there's nothing to bold or italicize.
+  async insertStyledBlock(insertAt: number, segments: TextSegment[]): Promise<void> {
+    await this.insertText(insertAt, segments.map((s) => s.text).join(""));
   }
 }

@@ -1,0 +1,23 @@
+{
+  "name": "agent-collab",
+  "version": "0.1.0",
+  "description": "Multi-AI collaboration agent: detects @Gemini tags in a Google Doc, calls the Gemini API, writes responses back, and keeps a changelog.",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js",
+    "test:mock": "npm run build && node dist/index.js --message \"Write with Gemini interview prep\" --once --mock"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
+    "google-auth-library": "^9.14.1",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "typescript": "^5.6.3"
+  }
+}

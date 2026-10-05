@@ -7,7 +7,8 @@ import {
   GoogleDocsClient,
   MockDocClient,
   findUnansweredTags,
-  formatResponseBlock,
+  formatResponseHeader,
+  formatResponseBody,
 } from "./doc-monitor.js";
 import { createGeminiClient } from "./gemini-client.js";
 import { Changelog } from "./changelog.js";
@@ -68,7 +69,11 @@ async function runPass(docClient: DocClient, changelog: Changelog): Promise<numb
     const timestamp = new Date().toISOString();
     try {
       const response = await gemini.generate(tag.prompt, tag.context);
-      await docClient.insertText(tag.insertAt, formatResponseBlock(response, timestamp));
+      await docClient.insertAnsweredBlock(
+        tag.insertAt,
+        formatResponseHeader(timestamp),
+        formatResponseBody(response)
+      );
       await changelog.append({
         timestamp,
         actor: "Gemini",

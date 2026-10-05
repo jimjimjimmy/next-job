@@ -24,6 +24,12 @@ export interface DocClient {
   getText(): Promise<string>;
   /** Inserts `text` at character offset `insertAt` in the plain text. */
   insertText(insertAt: number, text: string): Promise<void>;
+  /**
+   * Inserts a response block at `insertAt`: a header line followed by the
+   * body text, with the header bolded where the backend supports rich
+   * formatting.
+   */
+  insertAnsweredBlock(insertAt: number, header: string, body: string): Promise<void>;
 }
 
 const TAG_PATTERN = /@Gemini\s+([^\n]+)/g;
@@ -50,16 +56,14 @@ export function findUnansweredTags(text: string): GeminiTag[] {
   return tags;
 }
 
-/** Formats the block written back into the doc under an answered tag. */
-export function formatResponseBlock(response: string, timestamp: string): string {
-  return (
-    `\n> Gemini response (${timestamp}) ${ANSWERED_MARKER}\n` +
-    response
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n") +
-    "\n"
-  );
+/** The bolded header line placed above each Gemini response. */
+export function formatResponseHeader(timestamp: string): string {
+  return `\nGemini response (${timestamp}) ${ANSWERED_MARKER}\n`;
+}
+
+/** The plain-text response body, placed under the header. */
+export function formatResponseBody(response: string): string {
+  return `${response}\n`;
 }
 
 /** Real backend: reads/writes a live Google Doc via the Docs API. */
@@ -105,6 +109,32 @@ export class GoogleDocsClient implements DocClient {
       },
     });
   }
+
+  async insertAnsweredBlock(insertAt: number, header: string, body: string): Promise<void> {
+    await this.docs.documents.batchUpdate({
+      documentId: this.docId,
+      requestBody: {
+        requests: [
+          {
+            insertText: {
+              text: header + body,
+              location: { index: insertAt },
+            },
+          },
+          {
+            updateTextStyle: {
+              range: {
+                startIndex: insertAt,
+                endIndex: insertAt + header.length,
+              },
+              textStyle: { bold: true },
+              fields: "bold",
+            },
+          },
+        ],
+      },
+    });
+  }
 }
 
 /** Flattens a Docs API document body into plain text, Docs-index-aligned. */
@@ -135,5 +165,11 @@ export class MockDocClient implements DocClient {
     const doc = JSON.parse(raw) as { title: string; content: string };
     doc.content = doc.content.slice(0, insertAt) + text + doc.content.slice(insertAt);
     await writeFile(this.filePath, JSON.stringify(doc, null, 2), "utf-8");
+  }
+
+  // The mock backend has no rich-text model, so the header is written as
+  // plain text like the body; there's nothing to bold.
+  async insertAnsweredBlock(insertAt: number, header: string, body: string): Promise<void> {
+    await this.insertText(insertAt, header + body);
   }
 }

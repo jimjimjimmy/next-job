@@ -13,7 +13,9 @@ under the tag, and keeps a changelog of who changed what and when.
   "answered" marker so it isn't re-answered on the next poll
 - Log every step to `changelog.json` (and render it as markdown)
 - Manual trigger/stop: a message containing "Write with Gemini ..." starts
-  monitoring; a message containing "stop" ends it
+  monitoring; a message containing "stop" ends it; a message containing
+  "What did Gemini say?" reads the doc and reports the latest answered
+  response without starting/stopping anything
 
 Not in this MVP: scheduling/background daemons, Claude writing into the doc,
 real-time multi-AI sync, or a UI — see the project brief for phase 2.
@@ -61,6 +63,17 @@ before and after to see the before/after state.
    ```bash
    npm start -- --message "stop"
    ```
+
+6. Check the latest answer without starting/stopping the monitor:
+
+   ```bash
+   npm start -- --message "What did Gemini say?"
+   ```
+
+   Prints the most recently answered `@Gemini` tag's prompt and response, and
+   logs a `Claude` changelog entry. This is how the round trip back to Claude
+   works today: say the phrase in chat, Claude runs this command, and relays
+   the result — there's no automatic push notification when the doc changes.
 
 ## How tag detection works
 

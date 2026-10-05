@@ -56,6 +56,41 @@ export function findUnansweredTags(text: string): GeminiTag[] {
   return tags;
 }
 
+/** A tag that already has a Gemini response written under it. */
+export interface AnsweredResponse {
+  prompt: string;
+  timestamp: string;
+  response: string;
+}
+
+const HEADER_PATTERN = /Gemini response \(([^)]+)\) \[agent-collab:answered\]\n/;
+
+/** Finds every already-answered @Gemini tag and its response, in doc order. */
+export function findAnsweredResponses(text: string): AnsweredResponse[] {
+  const results: AnsweredResponse[] = [];
+  for (const match of text.matchAll(TAG_PATTERN)) {
+    const prompt = match[1].trim();
+    const tagEnd = (match.index ?? 0) + match[0].length;
+    const after = text.slice(tagEnd, tagEnd + ANSWERED_MARKER.length + 200);
+    const headerMatch = after.match(HEADER_PATTERN);
+    if (!headerMatch || headerMatch.index === undefined) {
+      continue;
+    }
+
+    const bodyStart = tagEnd + headerMatch.index + headerMatch[0].length;
+    const rest = text.slice(bodyStart);
+    const nextTag = rest.match(/\n@Gemini\s/);
+    const bodyEnd = nextTag && nextTag.index !== undefined ? bodyStart + nextTag.index : text.length;
+
+    results.push({
+      prompt,
+      timestamp: headerMatch[1],
+      response: text.slice(bodyStart, bodyEnd).trim(),
+    });
+  }
+  return results;
+}
+
 /** The bolded header line placed above each Gemini response. */
 export function formatResponseHeader(timestamp: string): string {
   return `\nGemini response (${timestamp}) ${ANSWERED_MARKER}\n`;

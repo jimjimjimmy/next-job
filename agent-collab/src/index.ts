@@ -7,6 +7,7 @@ import {
   GoogleDocsClient,
   MockDocClient,
   findUnansweredTags,
+  findAnsweredResponses,
   formatResponseHeader,
   formatResponseBody,
 } from "./doc-monitor.js";
@@ -21,6 +22,7 @@ const LOCK_PATH = path.join(AGENT_ROOT, ".agent-running");
 
 const TRIGGER_PATTERN = /\bwrite with gemini\b/i;
 const STOP_PATTERN = /\bstop\b/i;
+const REPORT_PATTERN = /\bwhat did gemini say\b/i;
 
 interface Cli {
   message?: string;
@@ -163,9 +165,40 @@ async function stopMonitoring(changelog: Changelog): Promise<void> {
   console.log("[agent-collab] stop signal recorded. A running monitor loop will exit on its next poll.");
 }
 
+/** Reads the doc and prints the most recent answered @Gemini response, for Claude to relay. */
+async function reportLatest(cli: Cli, changelog: Changelog): Promise<void> {
+  const docClient = await buildDocClient(cli.forceMock);
+  const text = await docClient.getText();
+  const responses = findAnsweredResponses(text);
+  const latest = responses[responses.length - 1];
+
+  if (!latest) {
+    console.log("[agent-collab] no answered @Gemini tags found yet.");
+  } else {
+    console.log(`[agent-collab] latest Gemini response (${latest.timestamp}):`);
+    console.log(`  prompt: ${latest.prompt}`);
+    console.log(`  response: ${latest.response}`);
+  }
+
+  await changelog.append({
+    timestamp: new Date().toISOString(),
+    actor: "Claude",
+    action: "checked latest Gemini response",
+    status: "success",
+    detail: latest
+      ? `found ${responses.length} answered tag(s); latest timestamp ${latest.timestamp}`
+      : "no answered tags found",
+  });
+}
+
 async function main() {
   const cli = parseArgs(process.argv.slice(2));
   const changelog = new Changelog(CHANGELOG_PATH);
+
+  if (cli.message && REPORT_PATTERN.test(cli.message)) {
+    await reportLatest(cli, changelog);
+    return;
+  }
 
   if (cli.message && STOP_PATTERN.test(cli.message) && !TRIGGER_PATTERN.test(cli.message)) {
     await stopMonitoring(changelog);
@@ -179,7 +212,7 @@ async function main() {
 
   console.log(
     '[agent-collab] no action taken. Pass --message "Write with Gemini <topic>" to start, ' +
-      'or --message "stop" to stop.'
+      '--message "What did Gemini say?" to check the latest response, or --message "stop" to stop.'
   );
 }
 

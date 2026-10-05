@@ -14,7 +14,7 @@ export class RealGeminiClient implements GeminiClient {
   private readonly client: GoogleGenerativeAI;
   private readonly modelName: string;
 
-  constructor(apiKey: string, modelName = "gemini-1.5-flash") {
+  constructor(apiKey: string, modelName = "gemini-flash-latest") {
     this.client = new GoogleGenerativeAI(apiKey);
     this.modelName = modelName;
   }

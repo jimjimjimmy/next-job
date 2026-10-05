@@ -12,10 +12,10 @@ under the tag, and keeps a changelog of who changed what and when.
 - Write the response back into the doc, tagged with a timestamp and an
   "answered" marker so it isn't re-answered on the next poll
 - Log every step to `changelog.json` (and render it as markdown)
-- Manual trigger/stop: a message containing "Write with Gemini ..." starts
-  monitoring; a message containing "stop" ends it; a message containing
-  "What did Gemini say?" reads the doc and reports the latest answered
-  response without starting/stopping anything
+- Manual trigger/stop: a message containing "Write with Gemini ..." (or the
+  shorthand "Write with G...") starts monitoring; a message containing "stop"
+  ends it; a message containing "What did Gemini say?" reads the doc and
+  reports the latest answered response without starting/stopping anything
 
 Not in this MVP: scheduling/background daemons, Claude writing into the doc,
 real-time multi-AI sync, or a UI — see the project brief for phase 2.

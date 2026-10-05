@@ -20,7 +20,7 @@ const MOCK_DOC_PATH = path.join(AGENT_ROOT, "tests", "mock-doc.json");
 const CHANGELOG_PATH = path.join(AGENT_ROOT, "changelog.json");
 const LOCK_PATH = path.join(AGENT_ROOT, ".agent-running");
 
-const TRIGGER_PATTERN = /\bwrite with gemini\b/i;
+const TRIGGER_PATTERN = /\bwrite with g(?:emini)?\b/i;
 const STOP_PATTERN = /\bstop\b/i;
 const REPORT_PATTERN = /\bwhat did gemini say\b/i;
 

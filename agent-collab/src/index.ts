@@ -22,7 +22,7 @@ const LOCK_PATH = path.join(AGENT_ROOT, ".agent-running");
 
 const TRIGGER_PATTERN = /\bwrite with g(?:emini)?\b/i;
 const STOP_PATTERN = /\bstop\b/i;
-const REPORT_PATTERN = /\bwhat did gemini say\b/i;
+const REPORT_PATTERN = /\bwhat did g(?:emini)? say\b/i;
 
 interface Cli {
   message?: string;

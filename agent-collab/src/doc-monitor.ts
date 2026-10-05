@@ -91,14 +91,14 @@ export function findAnsweredResponses(text: string): AnsweredResponse[] {
   return results;
 }
 
-/** The bolded header line placed above each Gemini response. */
+/** The plain (non-bold) header line placed above each Gemini response. */
 export function formatResponseHeader(timestamp: string): string {
   return `\nGemini response (${timestamp}) ${ANSWERED_MARKER}\n`;
 }
 
-/** The plain-text response body, placed under the header. */
+/** The bolded response body, placed under the header with a blank line in between. */
 export function formatResponseBody(response: string): string {
-  return `${response}\n`;
+  return `\n${response}\n`;
 }
 
 /** Real backend: reads/writes a live Google Doc via the Docs API. */
@@ -161,6 +161,16 @@ export class GoogleDocsClient implements DocClient {
               range: {
                 startIndex: insertAt,
                 endIndex: insertAt + header.length,
+              },
+              textStyle: { bold: false },
+              fields: "bold",
+            },
+          },
+          {
+            updateTextStyle: {
+              range: {
+                startIndex: insertAt + header.length,
+                endIndex: insertAt + header.length + body.length,
               },
               textStyle: { bold: true },
               fields: "bold",
